@@ -282,7 +282,7 @@ def getRandomImageFromImgur(url):
 
 if __name__ == "__main__":
 
-    parser = argparse.ArgumentParser(description='Facebook Power Suite')
+    parser = argparse.ArgumentParser(description='Imgur2FB')
     parser.add_argument('username', help='Facebook username')
     parser.add_argument('password', help='Facebook password')
     parser.add_argument('pageURL', help='Facebook page URL. Format: https://www.facebook.com/weedhumor')
