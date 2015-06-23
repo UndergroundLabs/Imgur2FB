@@ -10,11 +10,15 @@ The script will also pick a top comment from the Imgur image page, and post the 
 
 ## Help
 
+To get help:
+
     imgur2fb.py -h
+
+
 
     usage: imgur2fb.py [-h] username password pageURL imgurURL
 
-    Facebook Power Suite
+    Imgur2FB
 
     positional arguments:
       username    Facebook username
