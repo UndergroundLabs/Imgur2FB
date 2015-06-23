@@ -2,37 +2,42 @@
 
 import argparse
 import json
+import logging
 import re
 import random
 import requests
 import shutil
 from pyquery import PyQuery as pq
 
-session = requests.session()
 
 def main(username, password, page, imgurURL):
+
+    logging.basicConfig(filename='imgur2fb.log', level=logging.DEBUG)
+
+    session = requests.session()
 
     print 'Downloading a random image from Imgur'
     image, comment = getRandomImageFromImgur(imgurURL)
 
     print 'Logging into Facebook'
-    uid, dtsg = login(username, password)
+    uid, dtsg = login(session, username, password)
 
     print 'Switching to page: %s' % page
-    pageID = switchToPage(dtsg, uid, page)
+    pageID = switchToPage(session, dtsg, uid, page)
 
     print 'Uploading image to Facebook'
-    imageID = uploadImageToFacebook(pageID, dtsg, 100, 100, image)
+    imageID = uploadImageToFacebook(session, pageID, dtsg, 100, 100, image)
 
     print 'Posting image to page'
-    postID = postImageToPage(dtsg, pageID, imageID, comment)
+    postID = postImageToPage(session, dtsg, pageID, imageID, comment)
 
     print 'Done :)'
 
-'''
-Login to Facebook
-'''
-def login(username, password):
+def login(session, username, password):
+
+    '''
+    Login to Facebook
+    '''
 
     # Navigate to the Facebook homepage
     response = session.get('https://facebook.com')
@@ -64,18 +69,16 @@ def login(username, password):
     If the login was successful a cookie 'c_user' is set by Facebook. If the login failed, the 'c_user' cookie
     will not be present. This will raise an exception.
     '''
-    try:
-        uid = session.cookies['c_user']
-        dtsg = re.search('dtsg" value="([0-9a-zA-Z-_]+)"', response.text).group(1)
-    except Exception:
-        raise Exception('Login Failed!')
+    uid = session.cookies['c_user']
+    dtsg = re.search('dtsg" value="([0-9a-zA-Z-_]+)"', response.text).group(1)
 
     return uid, dtsg
 
-'''
-Return the numeric ID of a page
-'''
-def getPageID(page):
+def getPageID(session, page):
+
+    '''
+    Return the numeric ID of a page
+    '''
 
     resp = session.get(page)
     pageID = re.search('pageID":([0-9]+)', resp.text)
@@ -85,12 +88,13 @@ def getPageID(page):
 
     return pageID.group(1)
 
-'''
-Switch to a Facebook page
-'''
-def switchToPage(dtsg, uid, page):
+def switchToPage(session, dtsg, uid, page):
 
-    pageID = getPageID(page)
+    '''
+    Switch to a Facebook page
+    '''
+
+    pageID = getPageID(session, page)
 
     response = session.post('https://www.facebook.com/identity_switch.php', allow_redirects=False, data={
         'user_id': pageID,
@@ -105,18 +109,16 @@ def switchToPage(dtsg, uid, page):
         '__rev': ''
     })
 
-    try:
-        if pageID not in response.cookies['i_user']:
-            raise Exception('Failed to switch to page!')
-    except Exception, e:
-        raise Exception(e.message)
+    if pageID not in response.cookies['i_user']:
+        raise Exception('Failed to switch to page!')
 
     return pageID
 
-'''
-Uploads image to Facebook
-'''
-def uploadImageToFacebook(pageID, dtsg, imageWidth, imageHeight, image):
+def uploadImageToFacebook(session, pageID, dtsg, imageWidth, imageHeight, image):
+
+    '''
+    Uploads a JPG image to Facebook
+    '''
 
     params = {
         'target_id': pageID,
@@ -155,21 +157,18 @@ def uploadImageToFacebook(pageID, dtsg, imageWidth, imageHeight, image):
 
     j = json.loads(response.text[9:])
 
-    try:
-        # Return the image ID
-        return j['jsmods']['instances'][0][2][2]['fbid']
-    except Exception, e:
-        raise Exception('Failed to upload image')
+    return j['jsmods']['instances'][0][2][2]['fbid']
 
-'''
-Posts image to Facebook page
+def postImageToPage(session, dtsg, pageID, imageID, message):
+
+    '''
+    Posts image to Facebook page
 
     dtsg:    fb_dtsg token
     pageID:  ID of facebook page
     imageID: ID of image uploaded to Facebook (use uploadImageToFacebook())
     message: Status message
-'''
-def postImageToPage(dtsg, pageID, imageID, message):
+    '''
 
     params = {
         'av': pageID,
@@ -232,51 +231,43 @@ def postImageToPage(dtsg, pageID, imageID, message):
                             data=data,
                             headers = {'content-type': 'multipart/form-data'})
 
-    try:
-        j = json.loads(response.text[9:])
-        return j['payload']['photo_fbid']
-    except Exception, e:
-        raise Exception('Failed to post image to page')
+    j = json.loads(response.text[9:])
 
-'''
-Fetch a random image from Imgur
-'''
+    return j['payload']['photo_fbid']
+
 def getRandomImageFromImgur(url):
+
+    '''
+    Fetch a random image from Imgur
+    '''
 
     response = requests.get(url)
 
-    try:
-        dom = pq(response.text)
-        image = random.choice(dom('.image-list-link'))
-        image = pq(image).attr('href').split('/')[2]
-
-    except Exception, e:
-        raise Exception('Could not download image from: %s' % url)
+    dom = pq(response.text)
+    image = random.choice(dom('.image-list-link'))
+    image = pq(image).attr('href').split('/')[2]
 
     response = requests.get('http://i.imgur.com/%s.jpg' % image, stream=True)
 
     with open('images/%s.jpg' % image, 'wb') as f:
         shutil.copyfileobj(response.raw, f)
 
-    del response
-
     # Get the top comment from the Imgur page
     response = requests.get('http://imgur.com/gallery/%s/comment/best/hit.json' % image)
 
-    try:
-        j = json.loads(response.text)
+    j = json.loads(response.text)
 
-        for caption in j['data']['captions']:
+    for caption in reversed(j['data']['captions']):
 
-            # Skip the comment if comment contains a URL.
-            if ['http', 'www'] in caption['caption']:
-                continue
+        # Skip the comment if comment contains a URL.
+        if any(s in caption['caption'] for s in ['http', 'www']):
+            continue
 
-            comment = caption['caption']
-            break
+        comment = caption['caption']
+        break
 
-    except:
-        raise Exception('Could not fetch top comment from: %s' % 'http://imgur.com/gallery/%s' % image)
+    if not comment:
+        comment = ''
 
     return image, comment
 
@@ -290,7 +281,11 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+    print 'Imgur2FB - Automated Facebook Page Building'
+    print 'Developer: James Jeffery <jameslovescode@gmail.com>'
+
     try:
         main(args.username, args.password, args.pageURL, args.imgurURL)
     except Exception, e:
-        print e.message
+        logging.exception(e)
+        print 'Imgur2FB has failed. Check imgur2fb.log for details.'
