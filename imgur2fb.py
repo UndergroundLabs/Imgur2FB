@@ -17,24 +17,24 @@ def main(username, password, page, imgurURL):
 
     session = requests.session()
 
-    TerminalLog('Downloading a random image from Imgur')
+    terminalLogger('Downloading a random image from Imgur')
     image, comment = getRandomImageFromImgur(imgurURL)
 
-    TerminalLog('Logging into Facebook')
+    terminalLogger('Logging into Facebook')
     uid, dtsg = login(session, username, password)
 
-    TerminalLog('Switching to page: %s' % page)
+    terminalLogger('Switching to page: %s' % page)
     pageID = switchToPage(session, dtsg, uid, page)
 
-    TerminalLog('Uploading image to Facebook')
+    terminalLogger('Uploading image to Facebook')
     imageID = uploadImageToFacebook(session, pageID, dtsg, 100, 100, image)
 
-    TerminalLog('Posting image to page')
+    terminalLogger('Posting image to page')
     postImageToPage(session, dtsg, pageID, imageID, comment)
 
-    TerminalLog('Done :)')
+    terminalLogger('Done :)')
 
-def TerminalLog(message):
+def terminalLogger(message):
 
     print '[%s] %s' % (datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'), message)
 
