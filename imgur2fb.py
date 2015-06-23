@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import argparse
+import datetime
 import json
 import logging
 import re
@@ -16,22 +17,26 @@ def main(username, password, page, imgurURL):
 
     session = requests.session()
 
-    print 'Downloading a random image from Imgur'
+    TerminalLog('Downloading a random image from Imgur')
     image, comment = getRandomImageFromImgur(imgurURL)
 
-    print 'Logging into Facebook'
+    TerminalLog('Logging into Facebook')
     uid, dtsg = login(session, username, password)
 
-    print 'Switching to page: %s' % page
+    TerminalLog('Switching to page: %s' % page)
     pageID = switchToPage(session, dtsg, uid, page)
 
-    print 'Uploading image to Facebook'
+    TerminalLog('Uploading image to Facebook')
     imageID = uploadImageToFacebook(session, pageID, dtsg, 100, 100, image)
 
-    print 'Posting image to page'
-    postID = postImageToPage(session, dtsg, pageID, imageID, comment)
+    TerminalLog('Posting image to page')
+    postImageToPage(session, dtsg, pageID, imageID, comment)
 
-    print 'Done :)'
+    TerminalLog('Done :)')
+
+def TerminalLog(message):
+
+    print '[%s] %s' % (datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'), message)
 
 def login(session, username, password):
 
