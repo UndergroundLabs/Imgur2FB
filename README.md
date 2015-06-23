@@ -10,11 +10,9 @@ The script will also pick a top comment from the Imgur image page, and post the 
 
 ## Help
 
-To get help:
-
     imgur2fb.py -h
 
-
+Help output:
 
     usage: imgur2fb.py [-h] username password pageURL imgurURL
 
