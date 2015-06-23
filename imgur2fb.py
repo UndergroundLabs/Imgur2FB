@@ -74,8 +74,11 @@ def login(session, username, password):
     If the login was successful a cookie 'c_user' is set by Facebook. If the login failed, the 'c_user' cookie
     will not be present. This will raise an exception.
     '''
-    uid = session.cookies['c_user']
-    dtsg = re.search('dtsg" value="([0-9a-zA-Z-_]+)"', response.text).group(1)
+    try:
+        uid = session.cookies['c_user']
+        dtsg = re.search('dtsg" value="([0-9a-zA-Z-_]+)"', response.text).group(1)
+    except KeyError:
+        raise Exception('Login Failed!')
 
     return uid, dtsg
 
@@ -293,4 +296,4 @@ if __name__ == "__main__":
         main(args.username, args.password, args.pageURL, args.imgurURL)
     except Exception, e:
         logging.exception(e)
-        print 'Imgur2FB has failed. Check imgur2fb.log for details.'
+        print e
