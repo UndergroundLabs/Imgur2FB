@@ -1,5 +1,4 @@
 # Imgur2FB
----
 
 **Build your Facebook pages ... on autopilot**
 
